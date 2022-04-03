@@ -12,11 +12,13 @@ use byteorder::{ByteOrder, BigEndian};
 
 use std::net::IpAddr;
 
+mod packet;
+
 static MAC_INTERFACE: &'static str = "74:d0:2b:93:16:ec";
 static SERVER_IP: &'static str = "172.65.252.253";
 
 fn retrieve_network_interface() -> NetworkInterface {
-    let interface_names_match = |iface: &NetworkInterface| iface.mac.unwrap().to_string() == MAC_INTERFACE;
+    let interface_names_match = |interface: &NetworkInterface| interface.mac.unwrap().to_string() == MAC_INTERFACE;
     let interfaces = datalink::interfaces();
 
     interfaces.into_iter()
@@ -25,7 +27,7 @@ fn retrieve_network_interface() -> NetworkInterface {
         .unwrap_or_else(|| panic!("No such network interface: {}", MAC_INTERFACE))
 }
 
-fn handle_packet(packet: &[u8]) {
+fn handle_packet(buffer: &mut Vec<u8>, packet: &[u8]) {
     let packet = EthernetPacket::new(packet).unwrap();
 
     if packet.get_ethertype() == EtherTypes::Ipv4 {
@@ -43,20 +45,25 @@ fn handle_packet(packet: &[u8]) {
                             tcp.payload().len()
                         );
 
-                        // for byte in header.payload() {
-                        //     println!("{:#010b} - {}", byte, byte);
-                        // }
                         if tcp.payload().len() == 0 {
                             return
                         }
 
-                        let hiheader = BigEndian::read_u16(&tcp.payload());
-                        let packet_id = hiheader >> 2;
-                        let len_type = hiheader & 3;
+                        for byte in tcp.payload() {
+                            buffer.push(*byte);
+                        }
 
-                        println!("{:#018b} - {}", hiheader, hiheader);
-                        println!("{:#018b} - {}", packet_id, packet_id);
-                        println!("{:#018b} - {}", len_type, len_type);
+                        let header = BigEndian::read_u16(&tcp.payload());
+
+                        let mut packet = packet::Packet::new();
+
+                        packet.init(header);
+
+                        println!("Buffer length = {}", buffer.len())
+
+                        // println!("Header {:#018b} - {}", header, header);
+                        // println!("Packet Id {:#018b} - {}", packet.id, packet.id);
+                        // println!("Packet Length {:#018b} - {}", packet.length, packet.length);
                     }
                 } else {
                     println!("[{}]: Malformed TCP Packet", MAC_INTERFACE);
@@ -72,6 +79,7 @@ fn main() {
     println!("Starting data extractor.");
 
     let interface = retrieve_network_interface();
+    let buffer: &mut Vec<u8> = &mut Vec::new();
 
     let (_tx, mut rx) = match datalink::channel(&interface, Default::default()) {
         Ok(Ethernet(tx, rx)) => (tx, rx),
@@ -81,7 +89,7 @@ fn main() {
 
     loop {
         match rx.next() {
-            Ok(packet) => handle_packet(packet),
+            Ok(packet) => handle_packet(buffer, packet),
             Err(e) => {
                 panic!("An error occurred while reading: {}", e)
             }
