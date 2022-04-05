@@ -8,8 +8,6 @@ use pnet::packet::ipv4::Ipv4Packet;
 use pnet::packet::tcp::TcpPacket;
 use pnet::packet::Packet;
 
-use byteorder::{ByteOrder, BigEndian};
-
 use std::net::IpAddr;
 
 mod packet;
@@ -38,32 +36,23 @@ fn handle_packet(buffer: &mut Vec<u8>, packet: &[u8]) {
                 let tcp = TcpPacket::new(header.payload());
 
                 if let Some(tcp) = tcp {
-                    if IpAddr::V4(header.get_source()).to_string() == SERVER_IP {
+                    if IpAddr::V4(header.get_source()).to_string() == SERVER_IP && tcp.payload().len() > 0 {
                         println!(
                             "[{}]: TCP Packet received - length: {}",
                             MAC_INTERFACE,
                             tcp.payload().len()
                         );
 
-                        if tcp.payload().len() == 0 {
-                            return
-                        }
-
                         for byte in tcp.payload() {
                             buffer.push(*byte);
                         }
 
-                        let header = BigEndian::read_u16(&tcp.payload());
-
                         let mut packet = packet::Packet::new();
 
-                        packet.init(header);
+                        packet.init(buffer);
+                        packet.print_info();
 
-                        println!("Buffer length = {}", buffer.len())
-
-                        // println!("Header {:#018b} - {}", header, header);
-                        // println!("Packet Id {:#018b} - {}", packet.id, packet.id);
-                        // println!("Packet Length {:#018b} - {}", packet.length, packet.length);
+                        println!("Buffer length = {}", buffer.len());
                     }
                 } else {
                     println!("[{}]: Malformed TCP Packet", MAC_INTERFACE);
