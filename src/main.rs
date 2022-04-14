@@ -47,10 +47,23 @@ fn handle_packet(buffer: &mut Vec<u8>, packet: &[u8]) {
                             buffer.push(*byte);
                         }
 
-                        let mut packet = packet::Packet::new();
+                        let mut keep_going = true;
 
-                        packet.init(buffer);
-                        packet.print_info();
+                        while keep_going {
+                            if buffer.len() > 2 {
+                                let mut packet = packet::Packet::new();
+
+                                packet.init(buffer);
+
+                                if buffer.len() >= packet.length as usize {
+                                    packet.read(buffer);
+                                    packet.print_info();
+                                }
+                            } else {
+                                keep_going = false;
+                            }
+                        }
+
 
                         println!("Buffer length = {}", buffer.len());
                     }
