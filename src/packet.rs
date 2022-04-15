@@ -1,5 +1,3 @@
-extern crate pnet;
-
 pub struct Packet {
     pub id: u16,
     pub length_type: u8,
@@ -54,6 +52,11 @@ impl Packet {
         value
     }
 
+    pub fn read_var_ulong(&mut self) -> i64 {
+        // TODO the VLQ logic must be here
+        0
+    }
+
     pub fn read_int(&mut self) -> i32 {
         let mut value: i32 = self.payload.remove(0) as i32;
         let mut i = 0;
@@ -85,22 +88,5 @@ impl Packet {
 
     pub fn print_info(& mut self) {
         println!("Packet Id - {}", self.id.to_string());
-
-        if self.id == 373 {
-            // ChatAbstractClientMessage
-            // println!("Content Func: {}", self.read_utf());
-
-            // ChatAbstractServerMessage
-            println!("Channel: {}", self.read_byte().to_string());
-            println!("Content: {}", self.read_utf());
-            println!("Timestamp: {}", self.read_int().to_string());
-            println!("Fingerprint: {}", self.read_utf());
-
-            // ChatServerMessage
-            println!("Sender Id: {}", self.read_double().to_string());
-            println!("Sender Name: {}", self.read_utf());
-            println!("Prefix: {}", self.read_utf());
-            println!("Sender account Id: {}", self.read_int().to_string());
-        }
     }
 }

@@ -1,5 +1,13 @@
 extern crate pnet;
 
+mod network_message;
+mod packet;
+mod packets {
+    pub mod chat_abstract_server_message;
+    pub mod chat_server_message;
+    pub mod kamas_update_message;
+}
+
 use pnet::datalink::{self, NetworkInterface};
 use pnet::datalink::Channel::Ethernet;
 use pnet::packet::ethernet::{EthernetPacket, EtherTypes};
@@ -10,7 +18,9 @@ use pnet::packet::Packet;
 
 use std::net::IpAddr;
 
-mod packet;
+use crate::packets::chat_server_message::ChatServerMessage;
+use crate::packets::kamas_update_message::KamasUpdateMessage;
+use crate::network_message::NetworkMessage;
 
 static MAC_INTERFACE: &'static str = "74:d0:2b:93:16:ec";
 static SERVER_IP: &'static str = "172.65.252.253";
@@ -57,7 +67,37 @@ fn handle_packet(buffer: &mut Vec<u8>, packet: &[u8]) {
 
                                 if buffer.len() >= packet.length as usize {
                                     packet.read(buffer);
-                                    packet.print_info();
+
+                                    // TODO packets to implement
+                                    // 7116
+                                    // 4739
+                                    // 6875
+                                    // 1678
+
+                                    match Some(packet.id) {
+                                        Some(373) => {
+                                            ChatServerMessage::new(&mut packet);
+
+                                            packet
+                                        },
+                                        Some(3977) => {
+                                            let test = KamasUpdateMessage::new(&mut packet);
+
+                                            test.display_data();
+
+                                            packet
+                                        },
+                                        Some(_) => {
+                                            packet.print_info();
+
+                                            packet
+                                        },
+                                        None => {
+                                            println!("The impossible has happened.");
+
+                                            packet
+                                        }
+                                    };
                                 }
                             } else {
                                 keep_going = false;
